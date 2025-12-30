@@ -1,4 +1,3 @@
-
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import os
@@ -98,7 +97,8 @@ class ActivityApp:
     def scan_videos(self, folder):
         changes = []
         new_folder_path = folder
-        # First, process files in the starting folder itself
+
+        # Process files in the starting folder itself
         for f in os.listdir(folder):
             path = os.path.join(folder, f)
             if os.path.isfile(path):
@@ -109,10 +109,11 @@ class ActivityApp:
                     os.rename(path, new_path)
                     self.log_action(f"Renamed file: {path} -> {new_path}")
                     changes.append(("file", new_path, path))
-        # Now recursively process all subfolders and their files
+
+        # Recursively process all subfolders and their files
         for dirpath, dirnames, filenames in os.walk(folder):
             # Rename folders with periods (subfolders only)
-            for d in list(dirnames):
+            for i, d in enumerate(list(dirnames)):
                 if "." in d:
                     old_path = os.path.join(dirpath, d)
                     new_name = d.replace(".", "")
@@ -120,29 +121,26 @@ class ActivityApp:
                     os.rename(old_path, new_path)
                     self.log_action(f"Renamed folder: {old_path} -> {new_path}")
                     changes.append(("folder", new_path, old_path))
-                    dirnames[dirnames.index(d)] = new_name
-            # If the starting folder itself has a period and is being renamed
-            if dirpath == folder and "." in os.path.basename(folder):
-                new_folder_path = os.path.join(os.path.dirname(folder), os.path.basename(folder).replace(".", ""))
-            # Rename files with periods (except before extension)
+                    dirnames[i] = new_name  # Update dirnames for os.walk
+
+            # Rename files in the current directory
             for f in filenames:
                 name, ext = os.path.splitext(f)
                 new_name = name.replace(".", "").replace("-LMK", "") + ext
                 if new_name != f:
                     old_path = os.path.join(dirpath, f)
                     new_path = os.path.join(dirpath, new_name)
-                    for i, d in enumerate(list(dirnames)):
-                        new_name = d.replace(".", "")
-                        if new_name != d:
-                            old_path = os.path.join(dirpath, d)
-                            new_path = os.path.join(dirpath, new_name)
-                            os.rename(old_path, new_path)
-                            self.log_action(f"Renamed folder: {old_path} -> {new_path}")
-                            changes.append(("folder", new_path, old_path))
-                            dirnames[i] = new_name
-        if new_folder_path != folder:
+                    os.rename(old_path, new_path)
+                    self.log_action(f"Renamed file: {old_path} -> {new_path}")
+                    changes.append(("file", new_path, old_path))
+
+        # If the starting folder itself has a period and is being renamed
+        if "." in os.path.basename(folder):
+            new_folder_path = os.path.join(os.path.dirname(folder), os.path.basename(folder).replace(".", ""))
+            os.rename(folder, new_folder_path)
             self.log_action(f"Renamed starting folder: {folder} -> {new_folder_path}")
             changes.append(("folder", new_folder_path, folder))
+
         return changes
 
     def log_action(self, msg):
