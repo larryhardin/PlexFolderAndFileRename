@@ -3,6 +3,7 @@ from tkinter import filedialog, messagebox, ttk
 import os
 import datetime
 import shutil
+import json
 
 class ActivityApp:
     def __init__(self, root):
@@ -94,16 +95,30 @@ class ActivityApp:
         self.run_btn.state(["!disabled"])
         self.undo_btn.state(["!disabled"])
 
+    def load_replacements(self):
+        replacements_path = os.path.join(os.path.dirname(__file__), "replacements.json")
+        with open(replacements_path, "r") as file:
+            return json.load(file)
+
+    def apply_replacements(self, name, replacements):
+        for old, new in replacements.items():
+            if old != ".":  # Avoid replacing the period before the extension
+                name = name.replace(old, new)
+        return name
+
     def scan_videos(self, folder):
         changes = []
         new_folder_path = folder
+
+        # Load replacements from JSON file
+        replacements = self.load_replacements()
 
         # Process files in the starting folder itself
         for f in os.listdir(folder):
             path = os.path.join(folder, f)
             if os.path.isfile(path):
                 name, ext = os.path.splitext(f)
-                new_name = name.replace(".", "").replace("-LMK", "") + ext
+                new_name = self.apply_replacements(name, replacements) + ext
                 if new_name != f:
                     new_path = os.path.join(folder, new_name)
                     os.rename(path, new_path)
@@ -116,7 +131,7 @@ class ActivityApp:
             for i, d in enumerate(list(dirnames)):
                 if "." in d:
                     old_path = os.path.join(dirpath, d)
-                    new_name = d.replace(".", "")
+                    new_name = self.apply_replacements(d, replacements)
                     new_path = os.path.join(dirpath, new_name)
                     os.rename(old_path, new_path)
                     self.log_action(f"Renamed folder: {old_path} -> {new_path}")
@@ -126,7 +141,7 @@ class ActivityApp:
             # Rename files in the current directory
             for f in filenames:
                 name, ext = os.path.splitext(f)
-                new_name = name.replace(".", "").replace("-LMK", "") + ext
+                new_name = self.apply_replacements(name, replacements) + ext
                 if new_name != f:
                     old_path = os.path.join(dirpath, f)
                     new_path = os.path.join(dirpath, new_name)
@@ -136,7 +151,7 @@ class ActivityApp:
 
         # If the starting folder itself has a period and is being renamed
         if "." in os.path.basename(folder):
-            new_folder_path = os.path.join(os.path.dirname(folder), os.path.basename(folder).replace(".", ""))
+            new_folder_path = os.path.join(os.path.dirname(folder), self.apply_replacements(os.path.basename(folder), replacements))
             os.rename(folder, new_folder_path)
             self.log_action(f"Renamed starting folder: {folder} -> {new_folder_path}")
             changes.append(("folder", new_folder_path, folder))
